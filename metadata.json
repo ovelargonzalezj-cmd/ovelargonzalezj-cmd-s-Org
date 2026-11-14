@@ -1,0 +1,6 @@
+{
+  "name": "AsunciónTech — Soporte Técnico Profesional en Paraguay",
+  "description": "Centro de soporte técnico en Asunción, Paraguay con diagnóstico y presupuesto automático por IA, seguimiento en tiempo real de reparaciones, notificaciones push, pago en línea con facturación electrónica automática y panel administrativo centralizado.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

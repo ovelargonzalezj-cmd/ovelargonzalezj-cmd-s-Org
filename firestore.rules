@@ -1,0 +1,395 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global Safety Net
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Global Primitives
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isVerifiedUser() {
+      return isSignedIn() && request.auth.token.email_verified == true;
+    }
+
+    function isAdmin() {
+      return isVerifiedUser() && (
+        request.auth.token.email == 'ovelargonzalezj@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isValidStatus(status) {
+      return status in ['recibido', 'diagnostico', 'en_reparacion', 'control_calidad', 'listo', 'entregado'];
+    }
+
+    function isValidCategory(cat) {
+      return cat in ['notebook', 'smartphone', 'desktop', 'tablet', 'consola', 'otro'];
+    }
+
+    function isValidPaymentStatus(ps) {
+      return ps in ['pendiente', 'pagado'];
+    }
+
+    function isValidPaymentMethod(pm) {
+      return pm in ['pendiente', 'tarjeta', 'transferencia_sipap', 'billetera_electronica'];
+    }
+
+    function isValidServiceOrder(data) {
+      return data.keys().hasAll([
+        'orderId', 'trackingCode', 'ownerUid', 'customerName', 'customerEmail',
+        'customerPhone', 'customerRuc', 'deviceCategory', 'deviceModel',
+        'problemSummary', 'selectedIssues', 'status', 'estimatedHours',
+        'estimatedCostPyg', 'assignedTechnician', 'technicianNotes',
+        'paymentStatus', 'paymentMethod', 'invoiceNumber', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'orderId', 'trackingCode', 'ownerUid', 'customerName', 'customerEmail',
+        'customerPhone', 'customerRuc', 'deviceCategory', 'deviceModel',
+        'problemSummary', 'selectedIssues', 'status', 'estimatedHours',
+        'estimatedCostPyg', 'assignedTechnician', 'technicianNotes',
+        'paymentStatus', 'paymentMethod', 'invoiceNumber', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.orderId) &&
+      data.trackingCode is string && data.trackingCode.size() >= 7 && data.trackingCode.size() <= 16 && data.trackingCode.matches('^AT-[A-Z0-9]{4,10}$') &&
+      data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+      data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100 &&
+      data.customerEmail is string && data.customerEmail.size() >= 5 && data.customerEmail.size() <= 120 &&
+      data.customerPhone is string && data.customerPhone.size() >= 6 && data.customerPhone.size() <= 30 &&
+      data.customerRuc is string && data.customerRuc.size() <= 25 &&
+      isValidCategory(data.deviceCategory) &&
+      data.deviceModel is string && data.deviceModel.size() >= 2 && data.deviceModel.size() <= 120 &&
+      data.problemSummary is string && data.problemSummary.size() >= 5 && data.problemSummary.size() <= 600 &&
+      data.selectedIssues is list && data.selectedIssues.size() >= 1 && data.selectedIssues.size() <= 8 &&
+      data.selectedIssues[0] is string && data.selectedIssues[0].size() <= 100 &&
+      isValidStatus(data.status) &&
+      data.estimatedHours is number && data.estimatedHours >= 1 && data.estimatedHours <= 720 &&
+      data.estimatedCostPyg is number && data.estimatedCostPyg >= 0 && data.estimatedCostPyg <= 100000000 &&
+      data.assignedTechnician is string && data.assignedTechnician.size() <= 80 &&
+      data.technicianNotes is string && data.technicianNotes.size() <= 600 &&
+      isValidPaymentStatus(data.paymentStatus) &&
+      isValidPaymentMethod(data.paymentMethod) &&
+      data.invoiceNumber is string && data.invoiceNumber.size() <= 40 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidTimelineEvent(data) {
+      return data.keys().hasAll([
+        'eventId', 'orderId', 'ownerUid', 'status', 'message', 'hoursRemaining', 'createdBy', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'eventId', 'orderId', 'ownerUid', 'status', 'message', 'hoursRemaining', 'createdBy', 'createdAt'
+      ]) &&
+      isValidId(data.eventId) &&
+      isValidId(data.orderId) &&
+      data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+      isValidStatus(data.status) &&
+      data.message is string && data.message.size() >= 2 && data.message.size() <= 300 &&
+      data.hoursRemaining is number && data.hoursRemaining >= 0 && data.hoursRemaining <= 720 &&
+      data.createdBy is string && data.createdBy.size() >= 2 && data.createdBy.size() <= 80 &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidPublicTracking(data) {
+      return data.keys().hasAll([
+        'trackingCode', 'orderId', 'ownerUid', 'deviceCategory', 'deviceModel',
+        'status', 'estimatedHours', 'estimatedCostPyg', 'paymentStatus',
+        'lastMessage', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'trackingCode', 'orderId', 'ownerUid', 'deviceCategory', 'deviceModel',
+        'status', 'estimatedHours', 'estimatedCostPyg', 'paymentStatus',
+        'lastMessage', 'createdAt', 'updatedAt'
+      ]) &&
+      data.trackingCode is string && data.trackingCode.size() >= 7 && data.trackingCode.size() <= 16 && data.trackingCode.matches('^AT-[A-Z0-9]{4,10}$') &&
+      isValidId(data.orderId) &&
+      data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+      isValidCategory(data.deviceCategory) &&
+      data.deviceModel is string && data.deviceModel.size() >= 2 && data.deviceModel.size() <= 120 &&
+      isValidStatus(data.status) &&
+      data.estimatedHours is number && data.estimatedHours >= 0 && data.estimatedHours <= 720 &&
+      data.estimatedCostPyg is number && data.estimatedCostPyg >= 0 && data.estimatedCostPyg <= 100000000 &&
+      isValidPaymentStatus(data.paymentStatus) &&
+      data.lastMessage is string && data.lastMessage.size() >= 2 && data.lastMessage.size() <= 300 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    function isValidInvoice(data) {
+      return data.keys().hasAll([
+        'invoiceId', 'invoiceNumber', 'timbrado', 'orderId', 'trackingCode', 'ownerUid',
+        'customerName', 'customerRuc', 'customerEmail', 'deviceModel', 'concept',
+        'subtotalGravadaPyg', 'iva10Pyg', 'totalPyg', 'paymentMethod', 'authorizationCode', 'issuedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'invoiceId', 'invoiceNumber', 'timbrado', 'orderId', 'trackingCode', 'ownerUid',
+        'customerName', 'customerRuc', 'customerEmail', 'deviceModel', 'concept',
+        'subtotalGravadaPyg', 'iva10Pyg', 'totalPyg', 'paymentMethod', 'authorizationCode', 'issuedAt'
+      ]) &&
+      isValidId(data.invoiceId) &&
+      data.invoiceNumber is string && data.invoiceNumber.size() >= 5 && data.invoiceNumber.size() <= 40 &&
+      data.timbrado is string && data.timbrado.size() >= 6 && data.timbrado.size() <= 20 &&
+      isValidId(data.orderId) &&
+      data.trackingCode is string && data.trackingCode.size() >= 7 && data.trackingCode.size() <= 16 &&
+      data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+      data.customerName is string && data.customerName.size() >= 2 && data.customerName.size() <= 100 &&
+      data.customerRuc is string && data.customerRuc.size() <= 25 &&
+      data.customerEmail is string && data.customerEmail.size() >= 5 && data.customerEmail.size() <= 120 &&
+      data.deviceModel is string && data.deviceModel.size() >= 2 && data.deviceModel.size() <= 120 &&
+      data.concept is string && data.concept.size() >= 3 && data.concept.size() <= 300 &&
+      data.subtotalGravadaPyg is number && data.subtotalGravadaPyg >= 0 &&
+      data.iva10Pyg is number && data.iva10Pyg >= 0 &&
+      data.totalPyg is number && data.totalPyg > 0 &&
+      data.paymentMethod in ['tarjeta', 'transferencia_sipap', 'billetera_electronica'] &&
+      data.authorizationCode is string && data.authorizationCode.size() >= 4 && data.authorizationCode.size() <= 32 &&
+      data.issuedAt is timestamp;
+    }
+
+    function isValidNotification(data) {
+      return data.keys().hasAll([
+        'notificationId', 'ownerUid', 'orderId', 'trackingCode', 'title', 'body', 'read', 'createdAt'
+      ]) &&
+      data.keys().hasOnly([
+        'notificationId', 'ownerUid', 'orderId', 'trackingCode', 'title', 'body', 'read', 'createdAt'
+      ]) &&
+      isValidId(data.notificationId) &&
+      data.ownerUid is string && data.ownerUid.size() >= 1 && data.ownerUid.size() <= 128 &&
+      isValidId(data.orderId) &&
+      data.trackingCode is string && data.trackingCode.size() >= 7 && data.trackingCode.size() <= 16 &&
+      data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+      data.body is string && data.body.size() >= 2 && data.body.size() <= 300 &&
+      data.read is bool &&
+      data.createdAt is timestamp;
+    }
+
+    function isValidCustomerRecord(data) {
+      return data.keys().hasAll([
+        'customerId', 'name', 'phone', 'email', 'ruc', 'city', 'notes', 'createdAt', 'updatedAt'
+      ]) &&
+      data.keys().hasOnly([
+        'customerId', 'name', 'phone', 'email', 'ruc', 'city', 'notes', 'createdAt', 'updatedAt'
+      ]) &&
+      isValidId(data.customerId) &&
+      data.name is string && data.name.size() >= 2 && data.name.size() <= 100 &&
+      data.phone is string && data.phone.size() >= 6 && data.phone.size() <= 30 &&
+      data.email is string && data.email.size() <= 120 &&
+      data.ruc is string && data.ruc.size() <= 25 &&
+      data.city is string && data.city.size() <= 60 &&
+      data.notes is string && data.notes.size() <= 400 &&
+      data.createdAt is timestamp &&
+      data.updatedAt is timestamp;
+    }
+
+    // 1. Service Orders (PII Protected)
+    match /serviceOrders/{orderId} {
+      allow get: if isValidId(orderId) && (isAdmin() || (isVerifiedUser() && existing().ownerUid == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
+
+      allow create: if isVerifiedUser() &&
+        isValidId(orderId) &&
+        isValidServiceOrder(incoming()) &&
+        incoming().orderId == orderId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid &&
+            incoming().status == 'recibido' &&
+            incoming().paymentStatus == 'pendiente' &&
+            incoming().paymentMethod == 'pendiente' &&
+            incoming().invoiceNumber == '' &&
+            incoming().assignedTechnician == 'Por asignar'
+          )
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(orderId) &&
+        isValidServiceOrder(incoming()) &&
+        incoming().orderId == existing().orderId &&
+        incoming().trackingCode == existing().trackingCode &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            existing().status != 'entregado' &&
+            existing().paymentStatus == 'pendiente' &&
+            incoming().paymentStatus == 'pagado' &&
+            incoming().paymentMethod in ['tarjeta', 'transferencia_sipap', 'billetera_electronica'] &&
+            incoming().invoiceNumber.size() >= 5 &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['paymentStatus', 'paymentMethod', 'invoiceNumber', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isValidId(orderId) && isAdmin();
+
+      match /timeline/{eventId} {
+        allow get: if isValidId(orderId) && isValidId(eventId) && (
+          isAdmin() ||
+          (isVerifiedUser() && get(/databases/$(database)/documents/serviceOrders/$(orderId)).data.ownerUid == request.auth.uid)
+        );
+        allow list: if isAdmin() || (
+          isVerifiedUser() && get(/databases/$(database)/documents/serviceOrders/$(orderId)).data.ownerUid == request.auth.uid
+        );
+        allow create: if isVerifiedUser() &&
+          isValidId(orderId) &&
+          isValidId(eventId) &&
+          isValidTimelineEvent(incoming()) &&
+          incoming().eventId == eventId &&
+          incoming().orderId == orderId &&
+          incoming().createdAt == request.time &&
+          (
+            isAdmin() ||
+            (
+              existsAfter(/databases/$(database)/documents/serviceOrders/$(orderId)) &&
+              getAfter(/databases/$(database)/documents/serviceOrders/$(orderId)).data.ownerUid == request.auth.uid &&
+              incoming().ownerUid == request.auth.uid &&
+              incoming().status == 'recibido'
+            )
+          );
+        allow update, delete: if isValidId(orderId) && isValidId(eventId) && isAdmin();
+      }
+    }
+
+    // 2. Public Tracking (Zero-PII lookup by exact trackingCode)
+    match /publicTracking/{trackingCode} {
+      allow get: if isValidId(trackingCode);
+      allow list: if isAdmin();
+
+      allow create: if isVerifiedUser() &&
+        isValidId(trackingCode) &&
+        isValidPublicTracking(incoming()) &&
+        incoming().trackingCode == trackingCode &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid &&
+            incoming().status == 'recibido' &&
+            incoming().paymentStatus == 'pendiente' &&
+            existsAfter(/databases/$(database)/documents/serviceOrders/$(incoming().orderId))
+          )
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(trackingCode) &&
+        isValidPublicTracking(incoming()) &&
+        incoming().trackingCode == existing().trackingCode &&
+        incoming().orderId == existing().orderId &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            existing().paymentStatus == 'pendiente' &&
+            incoming().paymentStatus == 'pagado' &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['paymentStatus', 'updatedAt'])
+          )
+        );
+
+      allow delete: if isValidId(trackingCode) && isAdmin();
+    }
+
+    // 3. Invoices (Automatic Digital Facturas)
+    match /invoices/{invoiceId} {
+      allow get: if isValidId(invoiceId) && (isAdmin() || (isVerifiedUser() && existing().ownerUid == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
+
+      allow create: if isVerifiedUser() &&
+        isValidId(invoiceId) &&
+        isValidInvoice(incoming()) &&
+        incoming().invoiceId == invoiceId &&
+        incoming().issuedAt == request.time &&
+        (
+          isAdmin() ||
+          (
+            incoming().ownerUid == request.auth.uid &&
+            exists(/databases/$(database)/documents/serviceOrders/$(incoming().orderId)) &&
+            get(/databases/$(database)/documents/serviceOrders/$(incoming().orderId)).data.ownerUid == request.auth.uid
+          )
+        );
+
+      allow update, delete: if isValidId(invoiceId) && isAdmin();
+    }
+
+    // 4. Push Notifications Inbox
+    match /notifications/{notificationId} {
+      allow get: if isValidId(notificationId) && (isAdmin() || (isVerifiedUser() && existing().ownerUid == request.auth.uid));
+      allow list: if isAdmin() || (isVerifiedUser() && resource.data.ownerUid == request.auth.uid);
+
+      allow create: if isVerifiedUser() &&
+        isValidId(notificationId) &&
+        isValidNotification(incoming()) &&
+        incoming().notificationId == notificationId &&
+        incoming().createdAt == request.time &&
+        (
+          isAdmin() ||
+          incoming().ownerUid == request.auth.uid
+        );
+
+      allow update: if isVerifiedUser() &&
+        isValidId(notificationId) &&
+        isValidNotification(incoming()) &&
+        incoming().notificationId == existing().notificationId &&
+        incoming().ownerUid == existing().ownerUid &&
+        incoming().orderId == existing().orderId &&
+        incoming().createdAt == existing().createdAt &&
+        (
+          isAdmin() ||
+          (
+            existing().ownerUid == request.auth.uid &&
+            incoming().read == true &&
+            incoming().diff(existing()).affectedKeys().hasOnly(['read'])
+          )
+        );
+
+      allow delete: if isValidId(notificationId) && isAdmin();
+    }
+
+    // 5. Centralized Customer Directory (Admin Only)
+    match /customers/{customerId} {
+      allow get: if isValidId(customerId) && isAdmin();
+      allow list: if isAdmin();
+      allow create: if isValidId(customerId) && isAdmin() &&
+        isValidCustomerRecord(incoming()) &&
+        incoming().customerId == customerId &&
+        incoming().createdAt == request.time &&
+        incoming().updatedAt == request.time;
+      allow update: if isValidId(customerId) && isAdmin() &&
+        isValidCustomerRecord(incoming()) &&
+        incoming().customerId == existing().customerId &&
+        incoming().createdAt == existing().createdAt &&
+        incoming().updatedAt == request.time;
+      allow delete: if isValidId(customerId) && isAdmin();
+    }
+
+    // 6. Admins Registry (Read-only)
+    match /admins/{uid} {
+      allow get: if isValidId(uid) && isVerifiedUser() && request.auth.uid == uid;
+      allow list, write: if false;
+    }
+  }
+}

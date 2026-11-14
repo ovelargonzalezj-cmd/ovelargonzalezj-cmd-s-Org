@@ -1,0 +1,446 @@
+{
+  "entities": {
+    "ServiceOrder": {
+      "title": "ServiceOrder",
+      "description": "Orden de servicio técnico con modelo de equipo, fallas reportadas, estado en tiempo real, horas estimadas, presupuesto en PYG y estado de pago.",
+      "type": "object",
+      "properties": {
+        "orderId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "minLength": 4,
+          "maxLength": 64,
+          "description": "Identificador único de la orden"
+        },
+        "trackingCode": {
+          "type": "string",
+          "pattern": "^AT-[A-Z0-9]{4,10}$",
+          "minLength": 7,
+          "maxLength": 16,
+          "description": "Código público de seguimiento"
+        },
+        "ownerUid": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 128,
+          "description": "UID del cliente propietario de la orden"
+        },
+        "customerName": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "customerEmail": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 120
+        },
+        "customerPhone": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 30
+        },
+        "customerRuc": {
+          "type": "string",
+          "maxLength": 25
+        },
+        "deviceCategory": {
+          "type": "string",
+          "enum": ["notebook", "smartphone", "desktop", "tablet", "consola", "otro"]
+        },
+        "deviceModel": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 120
+        },
+        "problemSummary": {
+          "type": "string",
+          "minLength": 5,
+          "maxLength": 600
+        },
+        "selectedIssues": {
+          "type": "array",
+          "description": "Lista acotada de síntomas o fallas seleccionadas (máximo 8)"
+        },
+        "status": {
+          "type": "string",
+          "enum": ["recibido", "diagnostico", "en_reparacion", "control_calidad", "listo", "entregado"]
+        },
+        "estimatedHours": {
+          "type": "number"
+        },
+        "estimatedCostPyg": {
+          "type": "number"
+        },
+        "assignedTechnician": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "technicianNotes": {
+          "type": "string",
+          "maxLength": 600
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["pendiente", "pagado"]
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["pendiente", "tarjeta", "transferencia_sipap", "billetera_electronica"]
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "orderId",
+        "trackingCode",
+        "ownerUid",
+        "customerName",
+        "customerEmail",
+        "customerPhone",
+        "customerRuc",
+        "deviceCategory",
+        "deviceModel",
+        "problemSummary",
+        "selectedIssues",
+        "status",
+        "estimatedHours",
+        "estimatedCostPyg",
+        "assignedTechnician",
+        "technicianNotes",
+        "paymentStatus",
+        "paymentMethod",
+        "invoiceNumber",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "OrderTimelineEvent": {
+      "title": "OrderTimelineEvent",
+      "description": "Registro de actualización en tiempo real del avance técnico de una orden.",
+      "type": "object",
+      "properties": {
+        "eventId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "orderId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "status": {
+          "type": "string",
+          "enum": ["recibido", "diagnostico", "en_reparacion", "control_calidad", "listo", "entregado"]
+        },
+        "message": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 300
+        },
+        "hoursRemaining": {
+          "type": "number"
+        },
+        "createdBy": {
+          "type": "string",
+          "maxLength": 80
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["eventId", "orderId", "ownerUid", "status", "message", "hoursRemaining", "createdBy", "createdAt"]
+    },
+    "PublicTracking": {
+      "title": "PublicTracking",
+      "description": "Vista pública sin PII para consultar estado y horas estimadas mediante código de seguimiento.",
+      "type": "object",
+      "properties": {
+        "trackingCode": {
+          "type": "string",
+          "pattern": "^AT-[A-Z0-9]{4,10}$",
+          "maxLength": 16
+        },
+        "orderId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "deviceCategory": {
+          "type": "string",
+          "enum": ["notebook", "smartphone", "desktop", "tablet", "consola", "otro"]
+        },
+        "deviceModel": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "status": {
+          "type": "string",
+          "enum": ["recibido", "diagnostico", "en_reparacion", "control_calidad", "listo", "entregado"]
+        },
+        "estimatedHours": {
+          "type": "number"
+        },
+        "estimatedCostPyg": {
+          "type": "number"
+        },
+        "paymentStatus": {
+          "type": "string",
+          "enum": ["pendiente", "pagado"]
+        },
+        "lastMessage": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "trackingCode",
+        "orderId",
+        "ownerUid",
+        "deviceCategory",
+        "deviceModel",
+        "status",
+        "estimatedHours",
+        "estimatedCostPyg",
+        "paymentStatus",
+        "lastMessage",
+        "createdAt",
+        "updatedAt"
+      ]
+    },
+    "Invoice": {
+      "title": "Invoice",
+      "description": "Factura generada automáticamente tras completar el pago seguro en línea.",
+      "type": "object",
+      "properties": {
+        "invoiceId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "invoiceNumber": {
+          "type": "string",
+          "maxLength": 40
+        },
+        "timbrado": {
+          "type": "string",
+          "maxLength": 20
+        },
+        "orderId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "trackingCode": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "customerName": {
+          "type": "string",
+          "maxLength": 100
+        },
+        "customerRuc": {
+          "type": "string",
+          "maxLength": 25
+        },
+        "customerEmail": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "deviceModel": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "concept": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "subtotalGravadaPyg": {
+          "type": "number"
+        },
+        "iva10Pyg": {
+          "type": "number"
+        },
+        "totalPyg": {
+          "type": "number"
+        },
+        "paymentMethod": {
+          "type": "string",
+          "enum": ["tarjeta", "transferencia_sipap", "billetera_electronica"]
+        },
+        "authorizationCode": {
+          "type": "string",
+          "maxLength": 32
+        },
+        "issuedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": [
+        "invoiceId",
+        "invoiceNumber",
+        "timbrado",
+        "orderId",
+        "trackingCode",
+        "ownerUid",
+        "customerName",
+        "customerRuc",
+        "customerEmail",
+        "deviceModel",
+        "concept",
+        "subtotalGravadaPyg",
+        "iva10Pyg",
+        "totalPyg",
+        "paymentMethod",
+        "authorizationCode",
+        "issuedAt"
+      ]
+    },
+    "PushNotification": {
+      "title": "PushNotification",
+      "description": "Notificación push persistida sobre cambios de estado en el equipo del cliente.",
+      "type": "object",
+      "properties": {
+        "notificationId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "ownerUid": {
+          "type": "string",
+          "maxLength": 128
+        },
+        "orderId": {
+          "type": "string",
+          "maxLength": 64
+        },
+        "trackingCode": {
+          "type": "string",
+          "maxLength": 16
+        },
+        "title": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "body": {
+          "type": "string",
+          "maxLength": 300
+        },
+        "read": {
+          "type": "boolean"
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["notificationId", "ownerUid", "orderId", "trackingCode", "title", "body", "read", "createdAt"]
+    },
+    "CustomerRecord": {
+      "title": "CustomerRecord",
+      "description": "Registro centralizado de clientes administrado por el personal técnico.",
+      "type": "object",
+      "properties": {
+        "customerId": {
+          "type": "string",
+          "pattern": "^[a-zA-Z0-9_\\-]+$",
+          "maxLength": 64
+        },
+        "name": {
+          "type": "string",
+          "minLength": 2,
+          "maxLength": 100
+        },
+        "phone": {
+          "type": "string",
+          "minLength": 6,
+          "maxLength": 30
+        },
+        "email": {
+          "type": "string",
+          "maxLength": 120
+        },
+        "ruc": {
+          "type": "string",
+          "maxLength": 25
+        },
+        "city": {
+          "type": "string",
+          "maxLength": 60
+        },
+        "notes": {
+          "type": "string",
+          "maxLength": 400
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "format": "date-time"
+        }
+      },
+      "required": ["customerId", "name", "phone", "email", "ruc", "city", "notes", "createdAt", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/serviceOrders/{orderId}": {
+      "schema": { "$ref": "#/entities/ServiceOrder" },
+      "description": "Órdenes de servicio técnico con datos del cliente y estado de reparación"
+    },
+    "/serviceOrders/{orderId}/timeline/{eventId}": {
+      "schema": { "$ref": "#/entities/OrderTimelineEvent" },
+      "description": "Historial en tiempo real de cambios de estado y diagnóstico"
+    },
+    "/publicTracking/{trackingCode}": {
+      "schema": { "$ref": "#/entities/PublicTracking" },
+      "description": "Proyección pública sin PII para seguimiento por código"
+    },
+    "/invoices/{invoiceId}": {
+      "schema": { "$ref": "#/entities/Invoice" },
+      "description": "Facturas electrónicas generadas automáticamente tras pago en línea"
+    },
+    "/notifications/{notificationId}": {
+      "schema": { "$ref": "#/entities/PushNotification" },
+      "description": "Bandeja de notificaciones push de actualizaciones de reparación"
+    },
+    "/customers/{customerId}": {
+      "schema": { "$ref": "#/entities/CustomerRecord" },
+      "description": "Directorio de clientes gestionado desde el panel administrativo"
+    }
+  }
+}
